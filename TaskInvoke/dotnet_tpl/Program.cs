@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using dotnet_tpl;
 
 int iterations = 50_000;
@@ -34,3 +35,32 @@ Console.WriteLine("----------------------------------------------");
 Console.WriteLine($"Result of tpl v3 (added async/await with concurrent bag) algorithm: {result4}");
 Console.WriteLine($"Algorithm ran in {sw4.ElapsedMilliseconds} ms");
 Console.WriteLine("----------------------------------------------");
+
+var list = new List<int>();
+for (int i = 0; i < 1_000_000; i++)
+{
+  list.Add(i);
+}
+
+var sw5 = Stopwatch.StartNew();
+var res = new List<int>();
+
+list.ForEach(i => res.Add(i * i));
+
+sw5.Stop();
+Console.WriteLine("Normal loop duration " + sw5.ElapsedMilliseconds + " ms");
+
+var sw6 = Stopwatch.StartNew();
+// var chunks = list1.Chunk(100); // Chunking is useful when you want to process groups of elements together, but if you are operating on individual elements, PLINQ can handle parallelism without chunking.
+int maxThreads = Environment.ProcessorCount;
+
+var results = new ConcurrentBag<int>();
+
+list.AsParallel().WithDegreeOfParallelism(maxThreads).ForAll(i =>
+{
+  //Console.WriteLine($"Running on {Thread.CurrentThread.ManagedThreadId}");
+  results.Add(i * i);
+});
+
+sw6.Stop();
+Console.WriteLine("Parellel Loop Duration " + sw6.ElapsedMilliseconds + " ms");
